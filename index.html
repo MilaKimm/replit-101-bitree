@@ -1104,7 +1104,7 @@ ${wish}
     let text = q.q.replace('{name}', chatAnswers.name || '');
     if (q.dynamic) {
       const recs = buildContextualSuggestions(chatAnswers);
-      text += '\n\n💡 ' + chatAnswers.name + '님 답변 기반 추천:\n' + recs.map(r => '• ' + r).join('\n');
+      text += '\n\n💡 ' + chatAnswers.name + '님 답변 기반 예시 (예시는 참고만 하시고, 실제 필요한 기능을 고민해보세요.)\n' + recs.map(r => '• ' + r).join('\n');
     }
     setTimeout(() => {
       pushBubble(text, 'bot');
