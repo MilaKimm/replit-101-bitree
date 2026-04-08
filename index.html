@@ -897,7 +897,7 @@
   // 백엔드 연동 시 이 함수들만 fetch로 교체하면 됨
   // 실시간 동기화: storage 이벤트 + 폴링 (백엔드 붙으면 SSE/WebSocket으로 교체)
   const Ideas = (function() {
-    const KEY = 'bitree_ideas_v2';
+    const KEY = 'bitree_ideas_v3';
     const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
     const persist = (arr) => {
       localStorage.setItem(KEY, JSON.stringify(arr));
@@ -944,7 +944,7 @@
 
   // Cross-tab realtime sync
   window.addEventListener('storage', e => {
-    if (e.key === 'bitree_ideas_v2') {
+    if (e.key === 'bitree_ideas_v3') {
       renderGallery();
       if (currentModalId) openIdeaDetail(currentModalId);
     }
