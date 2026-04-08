@@ -632,25 +632,24 @@
       <div class="chat-progress"><div class="chat-progress-bar" id="chatProgressBar"></div></div>
     </div>
 
-    <h3 class="h3">4-2. 직접 만들기 — 30분 빌드 타임</h3>
-    <div class="timeline reveal">
-      <div class="timeline-row"><div class="timeline-time">2분</div><div class="timeline-text">New Repl → Agent에 셋업 프롬프트 붙여넣기</div></div>
-      <div class="timeline-row"><div class="timeline-time">5분</div><div class="timeline-text">Agent가 빌드하는 동안 옆자리와 아이디어 공유</div></div>
-      <div class="timeline-row"><div class="timeline-time">15분</div><div class="timeline-text">동작 확인 → 디자인·문구 손보기</div></div>
-      <div class="timeline-row"><div class="timeline-time">3분</div><div class="timeline-text">Deploy 버튼 → 진짜 URL 받기</div></div>
-      <div class="timeline-row"><div class="timeline-time">5분</div><div class="timeline-text">URL을 갤러리 보드에 올리기</div></div>
-    </div>
-
-    <div class="gallery-header" style="margin-top:80px;">
+    <div class="gallery-header" style="margin-top:48px;">
       <div>
         <h3 class="h3" style="margin:0;">아이디어 모아보기</h3>
         <p style="font-size:14px; color:var(--gray-4); margin:6px 0 0;">총 <span id="galleryCount">0</span>개의 아이디어가 등록되었습니다.</p>
       </div>
-      <button type="button" class="idea-btn" onclick="document.getElementById('ideaForm').scrollIntoView({behavior:'smooth'})">+ 새 아이디어 작성</button>
+      <button type="button" class="idea-btn" onclick="document.getElementById('chatBoard').scrollIntoView({behavior:'smooth'})">+ 새 아이디어 작성</button>
     </div>
 
     <div class="gallery-grid" id="galleryGrid"></div>
-    <p class="gallery-empty" id="galleryEmpty">아직 올라온 아이디어가 없어요. 위 폼에서 첫 번째가 되어보세요!</p>
+    <p class="gallery-empty" id="galleryEmpty">아직 올라온 아이디어가 없어요. 위 채팅에서 첫 번째가 되어보세요!</p>
+
+    <h3 class="h3" style="margin-top:80px;">4-2. 직접 만들기</h3>
+    <div class="timeline reveal">
+      <div class="timeline-row"><div class="timeline-time">①</div><div class="timeline-text">New Repl → 대화창에 Replit PRD 붙여넣기</div></div>
+      <div class="timeline-row"><div class="timeline-time">②</div><div class="timeline-text">동작 확인 → 디자인·문구 손보기</div></div>
+      <div class="timeline-row"><div class="timeline-time">③</div><div class="timeline-text">Deploy 버튼 → 진짜 URL 받기</div></div>
+      <div class="timeline-row"><div class="timeline-time">④</div><div class="timeline-text">URL을 갤러리 보드에 올리기</div></div>
+    </div>
 
     <h3 class="h3" style="margin-top:80px;">4-3. 갤러리 워크 — 서로 보여주기</h3>
     <p class="lead">한 사람당 1~2분씩 본인 결과물 시연. URL 공유 + "왜 만들었는지" 한 줄 + 동작 시연.</p>
@@ -1088,20 +1087,15 @@ ${wish}
     const brief = chatAnswers.wish || chatAnswers.pain || '아이디어';
 
     setTimeout(() => {
-      pushBubble('🎉 다 들었습니다! 아래 요약과 PRD를 자동으로 만들었어요.', 'bot');
+      pushBubble('🎉 다 들었습니다! 아래 버튼을 누르면 요약본과 PRD를 만들어 모아보기에 올려드릴게요.', 'bot');
       pushSystemCard(`
-        <div class="chat-result-title">📋 요약</div>
-        <pre class="chat-result-pre">${esc(summary)}</pre>
-        <div class="chat-result-title" style="margin-top:14px;">🚀 Replit PRD</div>
-        <pre class="chat-result-pre chat-result-prd">${esc(prompt)}</pre>
-        <div class="chat-result-actions">
-          <button type="button" class="idea-btn" id="chatPostBtn">📌 모아보기에 올리기</button>
-          <button type="button" class="idea-btn idea-btn-ghost" id="chatDownloadBtn">⬇️ PRD를 .md로 받기</button>
-          <button type="button" class="idea-btn idea-btn-ghost" id="chatCopyBtn">📋 PRD 복사</button>
+        <div class="chat-result-actions" style="margin-top:0;">
+          <button type="button" class="idea-btn" id="chatPostBtn">📌 요약본 생성</button>
         </div>
       `);
 
-      document.getElementById('chatPostBtn').addEventListener('click', async () => {
+      document.getElementById('chatPostBtn').addEventListener('click', async (e) => {
+        e.target.disabled = true;
         const idea = {
           name: chatAnswers.name,
           brief: brief,
@@ -1112,21 +1106,6 @@ ${wish}
         await Ideas.add(idea);
         pushBubble('✅ 모아보기에 등록했어요. 아래 갤러리에서 확인하고, 다른 사람 글에도 댓글을 달아보세요!', 'bot');
         document.getElementById('galleryGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-
-      document.getElementById('chatDownloadBtn').addEventListener('click', () => {
-        const blob = new Blob([summary + '\n\n---\n\n' + prompt], { type: 'text/markdown' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `PRD_${chatAnswers.name || 'idea'}.md`;
-        a.click();
-      });
-
-      document.getElementById('chatCopyBtn').addEventListener('click', (e) => {
-        navigator.clipboard.writeText(prompt).then(() => {
-          const b = e.target; const old = b.textContent;
-          b.textContent = '✓ 복사됨'; setTimeout(() => b.textContent = old, 1800);
-        });
       });
     }, 350);
   }
