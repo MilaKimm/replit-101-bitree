@@ -611,11 +611,42 @@
     <p class="lead">아까 본 데모를, 이번엔 본인 업무로 다시 만듭니다. 4시간 워크샵의 하이라이트.</p>
 
     <h3 class="h3" style="margin-top:40px;">4-1. 아이디어 보드 — 내 고민 한 번 정리하기</h3>
-    <a href="https://replit-hackathon-site.replit.app/ideas" target="_blank" class="card reveal" style="display:block; padding:32px; background:linear-gradient(135deg, #FFF8F4, #FFFFFF); border-color: var(--orange); margin-bottom:60px;">
-      <div style="font-size:13px; font-weight:700; color:var(--orange); letter-spacing:0.1em; margin-bottom:12px;">💡 IDEA BOARD</div>
-      <div style="font-size:20px; font-weight:800; letter-spacing:-0.025em; margin-bottom:8px;">아이디어 보드 바로가기</div>
-      <div style="font-size:14px; color:var(--gray-4);">8개 질문에 답하면 → 고민 요약 + Replit Agent 셋업 프롬프트 자동 생성</div>
-    </a>
+    <p class="lead" style="margin-bottom:24px;">한 줄 아이디어 + 두 가지 다듬기 질문에 답하면 → <strong>아이디어 다듬기 결과 + Replit 셋업 프롬프트</strong>가 자동으로 만들어집니다. 그리고 모아보기에 올려서 서로 공유하세요.</p>
+
+    <form class="idea-board reveal" id="ideaForm">
+      <div class="idea-field">
+        <label>이름</label>
+        <input type="text" id="ib_name" placeholder="예: 밀라" autocomplete="off">
+      </div>
+      <div class="idea-field">
+        <label>한 줄 아이디어</label>
+        <input type="text" id="ib_brief" placeholder="예: 광고대행사 AE를 위한 주간 보고서 자동 생성기">
+      </div>
+      <div class="idea-field">
+        <label>Q1. 이 아이디어를 가장 먼저 사용할 사람은 누구이고, 그 사람이 지금 겪고 있는 가장 큰 불편함은 무엇인가요?</label>
+        <textarea id="ib_q1" rows="3" placeholder="예: 광고대행사 AE. 매주 금요일 캠페인별 진행 보고서를 똑같은 양식으로 채워 넣는 데 1시간 30분 소요."></textarea>
+      </div>
+      <div class="idea-field">
+        <label>Q2. 첫 버전에서 반드시 동작해야 하는 핵심 기능 1가지는 무엇이고, 사용자는 그 기능을 어떤 상황에서 쓰게 되나요?</label>
+        <textarea id="ib_q2" rows="3" placeholder="예: 캠페인 숫자를 시트에 넣으면 클라이언트별 1페이지 HTML 보고서 자동 생성. 매주 금요일 보고 직전에 사용."></textarea>
+      </div>
+
+      <div class="idea-actions">
+        <button type="button" class="idea-btn" id="ideaGenBtn">✨ 다듬기 + 모아보기에 올리기</button>
+        <button type="button" class="idea-btn idea-btn-ghost" id="ideaResetBtn">초기화</button>
+      </div>
+    </form>
+
+    <div class="idea-result" id="ideaResult" hidden>
+      <div class="idea-result-block">
+        <div class="idea-result-label">🚀 Replit 셋업 프롬프트 (미리보기)</div>
+        <div class="idea-result-label-row" style="margin-top:8px;">
+          <span style="font-size:13px; color:var(--gray-4);">자동 생성됨 — 모아보기에 함께 저장됩니다</span>
+          <button type="button" class="prd-copy" id="ideaCopyBtn">📋 복사</button>
+        </div>
+        <pre class="prd-code"><code id="ideaPrompt"></code></pre>
+      </div>
+    </div>
 
     <h3 class="h3">4-2. 직접 만들기 — 30분 빌드 타임</h3>
     <div class="timeline reveal">
@@ -626,15 +657,31 @@
       <div class="timeline-row"><div class="timeline-time">5분</div><div class="timeline-text">URL을 갤러리 보드에 올리기</div></div>
     </div>
 
-    <a href="https://replit-hackathon-site.replit.app/ideas/gallery" target="_blank" class="card reveal" style="display:block; padding:24px 32px; margin-top:32px;">
-      <strong style="color:var(--orange);">👉 모아보기 갤러리</strong> — 다른 참여자들의 아이디어를 실시간으로 (남의 것 그대로 가져가도 OK)
-    </a>
+    <div class="gallery-header" style="margin-top:80px;">
+      <div>
+        <h3 class="h3" style="margin:0;">아이디어 모아보기</h3>
+        <p style="font-size:14px; color:var(--gray-4); margin:6px 0 0;">총 <span id="galleryCount">0</span>개의 아이디어가 등록되었습니다.</p>
+      </div>
+      <button type="button" class="idea-btn" onclick="document.getElementById('ideaForm').scrollIntoView({behavior:'smooth'})">+ 새 아이디어 작성</button>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid"></div>
+    <p class="gallery-empty" id="galleryEmpty">아직 올라온 아이디어가 없어요. 위 폼에서 첫 번째가 되어보세요!</p>
 
     <h3 class="h3" style="margin-top:80px;">4-3. 갤러리 워크 — 서로 보여주기</h3>
     <p class="lead">한 사람당 1~2분씩 본인 결과물 시연. URL 공유 + "왜 만들었는지" 한 줄 + 동작 시연.</p>
     <p class="quote reveal">내가 만든 걸 누군가에게 보여주는 순간, 그게 진짜 도구가 됩니다.</p>
   </div>
 </section>
+
+<!-- ============ Idea Detail Modal ============ -->
+<div class="idea-modal" id="ideaModal" hidden>
+  <div class="idea-modal-overlay" data-close></div>
+  <div class="idea-modal-panel">
+    <button type="button" class="idea-modal-back" data-close>← 모아보기로 돌아가기</button>
+    <div class="idea-modal-body" id="ideaModalBody"></div>
+  </div>
+</div>
 
 <!-- ============ 5. 외부 연동 ============ -->
 <section id="ch5" data-ch="5">
@@ -708,7 +755,7 @@
   <div class="bg-blob tr"></div>
   <div class="container section-inner">
     <span class="eyebrow">CHAPTER 6</span>
-    <h2 class="h2">회사 단위로 <span class="accent">한 단계 더</span></h2>
+    <h2 class="h2">엔터프라이즈로 <span class="accent">한 단계 더</span></h2>
     <p class="lead">한 사람의 도구가 회사의 자산이 되는 순간, 진짜 변화가 시작됩니다.</p>
 
     <h3 class="h3" style="margin-top:40px;">개인 vs 팀 단위</h3>
@@ -792,7 +839,8 @@
 <footer class="footer">
   <div class="container">
     마켓핏랩 워크샵 'Replit 101' × BiTREE · 2026.04.11<br>
-    진행: Elan (마켓핏랩 Replit 사업 리드) · 콘텐츠/운영: Mila / Michelle
+    © 2026 MarketFit Lab. All Rights Reserved.<br>
+    워크샵 문의 · <a href="mailto:hello@mfitlab.com" style="color:inherit; text-decoration:underline;">hello@mfitlab.com</a>
   </div>
 </footer>
 
@@ -861,6 +909,255 @@
       });
     });
   }
+
+  // ============ Ideas Data Layer ============
+  // 백엔드 연동 시 이 4개 함수만 fetch로 교체하면 됨
+  const Ideas = (function() {
+    const KEY = 'bitree_ideas_v1';
+    const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
+    const persist = (arr) => localStorage.setItem(KEY, JSON.stringify(arr));
+    return {
+      list: () => Promise.resolve(load()),
+      add: (idea) => {
+        const arr = load();
+        idea.id = 'i' + Date.now() + Math.random().toString(36).slice(2, 6);
+        idea.createdAt = Date.now();
+        idea.comments = [];
+        arr.unshift(idea);
+        persist(arr);
+        return Promise.resolve(idea);
+      },
+      remove: (id) => {
+        persist(load().filter(x => x.id !== id));
+        return Promise.resolve();
+      },
+      addComment: (id, comment) => {
+        const arr = load();
+        const it = arr.find(x => x.id === id);
+        if (it) {
+          it.comments = it.comments || [];
+          it.comments.push({ ...comment, id: 'c' + Date.now(), createdAt: Date.now() });
+          persist(arr);
+        }
+        return Promise.resolve();
+      }
+    };
+  })();
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDate = (t) => { const d = new Date(t); return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`; };
+
+  const buildPrompt = (idea) => `다음 PRD를 기반으로 웹 앱을 만들어주세요.
+
+# ${idea.brief}
+
+## 1. 문제 정의
+${idea.q1}
+
+## 2. 핵심 기능 (첫 버전)
+${idea.q2}
+
+## 3. 입력 / 출력
+- 입력: 사용자가 직접 손으로 하던 작업을 폼/시트로 입력받기
+- 출력: 1페이지 결과물 (HTML 화면)
+
+## 4. 디자인
+- 깔끔한 비즈니스 톤, 흰 배경 + 네이비 포인트
+- 페이지 타이틀에 "${idea.name}" 표기
+
+## 5. 기술 스택
+- HTML + Tailwind(CDN) + Vanilla JS
+- 백엔드: Node.js(Express) 또는 Python(Flask)
+- LLM이 필요하면 Replit AI integration 사용 (외부 API 키 X)
+
+## 6. 만들지 말 것
+- 회원가입/로그인, DB, 다국어, 결제, 이메일 발송 X
+
+## 7. 완료 조건
+- Run 버튼으로 처음~끝까지 동작
+- Deploy 버튼으로 진짜 URL에서 동일하게 동작`;
+
+  // ============ Idea Board (form) ============
+  const ideaGen = document.getElementById('ideaGenBtn');
+  if (ideaGen) {
+    const $v = id => document.getElementById(id).value.trim();
+    const previewPrompt = () => buildPrompt({
+      name: $v('ib_name') || '나',
+      brief: $v('ib_brief') || '(한 줄 아이디어)',
+      q1: $v('ib_q1') || '(미입력)',
+      q2: $v('ib_q2') || '(미입력)'
+    });
+
+    ideaGen.addEventListener('click', async () => {
+      const name = $v('ib_name'), brief = $v('ib_brief'), q1 = $v('ib_q1'), q2 = $v('ib_q2');
+      if (!name || !brief || !q1 || !q2) { alert('이름·아이디어·Q1·Q2를 모두 채워주세요'); return; }
+      const idea = { name, brief, q1, q2 };
+      idea.prompt = buildPrompt(idea);
+      await Ideas.add(idea);
+      document.getElementById('ideaForm').reset();
+      document.getElementById('ideaResult').hidden = true;
+      await renderGallery();
+      document.getElementById('galleryGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    document.getElementById('ideaResetBtn').addEventListener('click', () => {
+      document.getElementById('ideaForm').reset();
+      document.getElementById('ideaResult').hidden = true;
+    });
+
+    document.getElementById('ideaCopyBtn').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(document.getElementById('ideaPrompt').textContent).then(() => {
+        const b = e.target; const old = b.textContent;
+        b.textContent = '✓ 복사됨'; setTimeout(() => b.textContent = old, 1800);
+      });
+    });
+
+    // Live preview as user types
+    ['ib_name', 'ib_brief', 'ib_q1', 'ib_q2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => {
+        if ($v('ib_q1') || $v('ib_q2')) {
+          document.getElementById('ideaPrompt').textContent = previewPrompt();
+          document.getElementById('ideaResult').hidden = false;
+        }
+      });
+    });
+  }
+
+  // ============ Gallery render ============
+  const grid = document.getElementById('galleryGrid');
+  const empty = document.getElementById('galleryEmpty');
+  const countEl = document.getElementById('galleryCount');
+
+  async function renderGallery() {
+    if (!grid) return;
+    const items = await Ideas.list();
+    if (countEl) countEl.textContent = items.length;
+    if (empty) empty.style.display = items.length ? 'none' : 'block';
+    grid.innerHTML = items.map(it => `
+      <article class="idea-card" data-id="${it.id}">
+        <header class="idea-card-head">
+          <span class="idea-card-name">${esc(it.name)}</span>
+          <span class="idea-card-meta">
+            <span class="idea-card-date">${fmtDate(it.createdAt)}</span>
+            <button type="button" class="idea-card-del" data-del="${it.id}">삭제</button>
+          </span>
+        </header>
+        <p class="idea-card-brief">${esc(it.brief)}</p>
+        <div class="idea-card-divider"></div>
+        <div class="idea-card-section">다듬기 답변</div>
+        <div class="idea-card-q">Q: 이 아이디어를 가장 먼저 사용할 사람은 누구이고, 그 사람이 지금 겪고 있는 가장 큰 불편함은 무엇인가요?</div>
+        <div class="idea-card-a">${esc(it.q1)}</div>
+        <div class="idea-card-q">Q: 첫 버전에서 반드시 동작해야 하는 핵심 기능 1가지는 무엇이고, 사용자는 그 기능을 어떤 상황에서 쓰게 되나요?</div>
+        <div class="idea-card-a">${esc(it.q2)}</div>
+        ${(it.comments && it.comments.length) ? `<div class="idea-card-comments">💬 완성 링크 ${it.comments.length}개</div>` : ''}
+      </article>
+    `).join('');
+
+    grid.querySelectorAll('.idea-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.matches('[data-del]')) {
+          e.stopPropagation();
+          if (confirm('이 아이디어를 삭제할까요?')) {
+            Ideas.remove(e.target.dataset.del).then(renderGallery);
+          }
+          return;
+        }
+        openIdeaDetail(card.dataset.id);
+      });
+    });
+  }
+
+  // ============ Modal detail view ============
+  const modal = document.getElementById('ideaModal');
+  const modalBody = document.getElementById('ideaModalBody');
+
+  async function openIdeaDetail(id) {
+    const items = await Ideas.list();
+    const it = items.find(x => x.id === id);
+    if (!it) return;
+    modalBody.innerHTML = `
+      <section class="md-section">
+        <header class="md-head">
+          <span class="md-name">${esc(it.name)}</span>
+          <span class="md-date">${fmtDate(it.createdAt)}</span>
+        </header>
+        <p class="md-brief">${esc(it.brief)}</p>
+      </section>
+
+      <section class="md-section">
+        <h3 class="md-title">아이디어 다듬기 결과</h3>
+        <div class="md-q">Q. 이 아이디어를 가장 먼저 사용할 사람은 누구이고, 그 사람이 지금 겪고 있는 가장 큰 불편함은 무엇인가요?</div>
+        <div class="md-a">${esc(it.q1)}</div>
+        <div class="md-q" style="margin-top:18px;">Q. 첫 버전에서 반드시 동작해야 하는 핵심 기능 1가지는 무엇이고, 사용자는 그 기능을 어떤 상황에서 쓰게 되나요?</div>
+        <div class="md-a">${esc(it.q2)}</div>
+      </section>
+
+      <section class="md-section">
+        <div class="md-title-row">
+          <h3 class="md-title md-title-accent">레플릿 셋업 프롬프트</h3>
+          <button type="button" class="md-copy" id="mdCopyBtn">복사하기</button>
+        </div>
+        <pre class="md-code"><code id="mdPromptCode">${esc(it.prompt || buildPrompt(it))}</code></pre>
+      </section>
+
+      <section class="md-section">
+        <h3 class="md-title md-title-accent">완성한 링크 (${(it.comments||[]).length})</h3>
+        <p class="md-hint">레플릿에서 빌드 완료한 사람은 아래에 Deploy URL을 댓글처럼 추가하세요.</p>
+        <div class="md-comments" id="mdCommentList">
+          ${(it.comments || []).map(c => `
+            <div class="md-comment">
+              <div class="md-comment-head">
+                <strong>${esc(c.author || '익명')}</strong>
+                <span>${fmtDate(c.createdAt)}</span>
+              </div>
+              <a href="${esc(c.url)}" target="_blank" rel="noopener" class="md-comment-link">🔗 ${esc(c.url)}</a>
+              ${c.note ? `<p class="md-comment-note">${esc(c.note)}</p>` : ''}
+            </div>
+          `).join('') || '<p class="md-empty">아직 완성 링크가 없어요. 첫 번째가 되어보세요!</p>'}
+        </div>
+
+        <div class="md-comment-form">
+          <input type="text" id="cm_author" placeholder="이름" autocomplete="off">
+          <input type="url" id="cm_url" placeholder="https://your-app.replit.app">
+          <input type="text" id="cm_note" placeholder="한 줄 후기 (선택)">
+          <button type="button" class="idea-btn" id="cmAddBtn">+ 링크 추가</button>
+        </div>
+      </section>
+    `;
+
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('mdCopyBtn').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(document.getElementById('mdPromptCode').textContent).then(() => {
+        const b = e.target; const old = b.textContent;
+        b.textContent = '✓ 복사됨'; setTimeout(() => b.textContent = old, 1800);
+      });
+    });
+
+    document.getElementById('cmAddBtn').addEventListener('click', async () => {
+      const author = document.getElementById('cm_author').value.trim() || '익명';
+      let url = document.getElementById('cm_url').value.trim();
+      const note = document.getElementById('cm_note').value.trim();
+      if (!url) { alert('URL을 입력해 주세요'); return; }
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      await Ideas.addComment(id, { author, url, note });
+      await openIdeaDetail(id);
+      await renderGallery();
+    });
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+  }
+  if (modal) {
+    modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeModal));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+  }
+
+  renderGallery();
 
   // Impact tabs
   document.querySelectorAll('.impact-tabs').forEach(wrap => {
