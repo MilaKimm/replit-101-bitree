@@ -610,42 +610,26 @@
     <h2 class="h2">내 업무에 쓸 <span class="accent">도구 만들기</span></h2>
     <p class="lead">아까 본 데모를, 이번엔 본인 업무로 다시 만듭니다. 4시간 워크샵의 하이라이트.</p>
 
-    <h3 class="h3" style="margin-top:40px;">4-1. 아이디어 보드 — 내 고민 한 번 정리하기</h3>
-    <p class="lead" style="margin-bottom:24px;">한 줄 아이디어 + 두 가지 다듬기 질문에 답하면 → <strong>아이디어 다듬기 결과 + Replit 셋업 프롬프트</strong>가 자동으로 만들어집니다. 그리고 모아보기에 올려서 서로 공유하세요.</p>
+    <h3 class="h3" style="margin-top:40px;">4-1. 아이디어 보드 — AI와 대화로 정리하기</h3>
+    <p class="lead" style="margin-bottom:24px;">AI 어시스턴트와 8가지 질문을 주고받으면 → <strong>고민 요약 + Replit PRD가 자동 생성</strong>되어 모아보기에 올라갑니다. 다른 참여자 글에 댓글과 완성 링크도 달 수 있어요.</p>
 
-    <form class="idea-board reveal" id="ideaForm">
-      <div class="idea-field">
-        <label>이름</label>
-        <input type="text" id="ib_name" placeholder="예: 밀라" autocomplete="off">
-      </div>
-      <div class="idea-field">
-        <label>한 줄 아이디어</label>
-        <input type="text" id="ib_brief" placeholder="예: 광고대행사 AE를 위한 주간 보고서 자동 생성기">
-      </div>
-      <div class="idea-field">
-        <label>Q1. 이 아이디어를 가장 먼저 사용할 사람은 누구이고, 그 사람이 지금 겪고 있는 가장 큰 불편함은 무엇인가요?</label>
-        <textarea id="ib_q1" rows="3" placeholder="예: 광고대행사 AE. 매주 금요일 캠페인별 진행 보고서를 똑같은 양식으로 채워 넣는 데 1시간 30분 소요."></textarea>
-      </div>
-      <div class="idea-field">
-        <label>Q2. 첫 버전에서 반드시 동작해야 하는 핵심 기능 1가지는 무엇이고, 사용자는 그 기능을 어떤 상황에서 쓰게 되나요?</label>
-        <textarea id="ib_q2" rows="3" placeholder="예: 캠페인 숫자를 시트에 넣으면 클라이언트별 1페이지 HTML 보고서 자동 생성. 매주 금요일 보고 직전에 사용."></textarea>
-      </div>
-
-      <div class="idea-actions">
-        <button type="button" class="idea-btn" id="ideaGenBtn">✨ 다듬기 + 모아보기에 올리기</button>
-        <button type="button" class="idea-btn idea-btn-ghost" id="ideaResetBtn">초기화</button>
-      </div>
-    </form>
-
-    <div class="idea-result" id="ideaResult" hidden>
-      <div class="idea-result-block">
-        <div class="idea-result-label">🚀 Replit 셋업 프롬프트 (미리보기)</div>
-        <div class="idea-result-label-row" style="margin-top:8px;">
-          <span style="font-size:13px; color:var(--gray-4);">자동 생성됨 — 모아보기에 함께 저장됩니다</span>
-          <button type="button" class="prd-copy" id="ideaCopyBtn">📋 복사</button>
+    <div class="chat-board reveal" id="chatBoard">
+      <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div>
+          <div class="chat-title">아이디어 다듬기 어시스턴트</div>
+          <div class="chat-sub">8개 질문 · 약 5분 소요</div>
         </div>
-        <pre class="prd-code"><code id="ideaPrompt"></code></pre>
+        <button type="button" class="chat-reset" id="chatResetBtn" title="처음부터 다시">↺</button>
       </div>
+
+      <div class="chat-messages" id="chatMessages"></div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="여기에 답변을 입력하고 Enter…" autocomplete="off">
+        <button type="button" class="chat-send" id="chatSendBtn">전송</button>
+      </div>
+      <div class="chat-progress"><div class="chat-progress-bar" id="chatProgressBar"></div></div>
     </div>
 
     <h3 class="h3">4-2. 직접 만들기 — 30분 빌드 타임</h3>
@@ -911,18 +895,23 @@
   }
 
   // ============ Ideas Data Layer ============
-  // 백엔드 연동 시 이 4개 함수만 fetch로 교체하면 됨
+  // 백엔드 연동 시 이 함수들만 fetch로 교체하면 됨
+  // 실시간 동기화: storage 이벤트 + 폴링 (백엔드 붙으면 SSE/WebSocket으로 교체)
   const Ideas = (function() {
-    const KEY = 'bitree_ideas_v1';
+    const KEY = 'bitree_ideas_v2';
     const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
-    const persist = (arr) => localStorage.setItem(KEY, JSON.stringify(arr));
+    const persist = (arr) => {
+      localStorage.setItem(KEY, JSON.stringify(arr));
+      window.dispatchEvent(new Event('ideas:changed'));
+    };
     return {
       list: () => Promise.resolve(load()),
       add: (idea) => {
         const arr = load();
         idea.id = 'i' + Date.now() + Math.random().toString(36).slice(2, 6);
         idea.createdAt = Date.now();
-        idea.comments = [];
+        idea.comments = idea.comments || [];
+        idea.links = idea.links || [];
         arr.unshift(idea);
         persist(arr);
         return Promise.resolve(idea);
@@ -940,119 +929,268 @@
           persist(arr);
         }
         return Promise.resolve();
+      },
+      addLink: (id, link) => {
+        const arr = load();
+        const it = arr.find(x => x.id === id);
+        if (it) {
+          it.links = it.links || [];
+          it.links.push({ ...link, id: 'l' + Date.now(), createdAt: Date.now() });
+          persist(arr);
+        }
+        return Promise.resolve();
       }
     };
   })();
 
+  // Cross-tab realtime sync
+  window.addEventListener('storage', e => {
+    if (e.key === 'bitree_ideas_v2') {
+      renderGallery();
+      if (currentModalId) openIdeaDetail(currentModalId);
+    }
+  });
+  window.addEventListener('ideas:changed', () => {
+    renderGallery();
+  });
+
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtDate = (t) => { const d = new Date(t); return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`; };
 
-  const buildPrompt = (idea) => `다음 PRD를 기반으로 웹 앱을 만들어주세요.
+  // ============ Chat-style Idea Board ============
+  const QUESTIONS = [
+    { key: 'name',    q: '안녕하세요! 👋 저는 아이디어 다듬기 어시스턴트입니다.\n먼저 이름이 어떻게 되시나요?', placeholder: '예: 밀라' },
+    { key: 'role',    q: '반가워요, {name}님! 지금 회사에서 어떤 일을 맡고 계세요?', placeholder: '예: 광고대행사 AE. 클라이언트 3곳 캠페인 관리' },
+    { key: 'day',     q: '하루가 보통 어떻게 흘러가시나요?', placeholder: '예: 오전 클라이언트 응대, 낮 내부 미팅, 저녁 보고 자료' },
+    { key: 'pain',    q: '그 중에 "아 이거 또 해야 하나..." 싶은 게 뭐예요?', placeholder: '예: 매주 금요일 캠페인별 진행 보고서 채우기' },
+    { key: 'freq',    q: '얼마나 자주 하세요? 한 번 할 때 시간이 얼마나 걸려요?', placeholder: '예: 주 1회, 약 1시간 30분' },
+    { key: 'detail',  q: '그 시간 동안 구체적으로 뭘 하세요?', placeholder: '예: 대시보드에서 숫자 복사 → 시트 정리 → PPT 옮기기' },
+    { key: 'wish',    q: '어떤 자동화를 원하세요?', placeholder: '예: 시트에 숫자만 채우면 클라이언트별 1페이지 보고서 자동 생성' },
+    { key: 'output',  q: '결과물은 어디로 받으면 되나요? (슬랙, 이메일, 화면 등)', placeholder: '예: 슬랙 채널에 링크 한 줄 공유' }
+  ];
 
-# ${idea.brief}
+  const buildSummary = (a) => `## ${a.name}님의 고민 요약\n\n` +
+    `**역할**: ${a.role}\n` +
+    `**반복 작업**: ${a.pain}\n` +
+    `**소요**: ${a.freq}\n` +
+    `**원하는 자동화**: ${a.wish}\n` +
+    `**결과물 전달**: ${a.output}`;
 
-## 1. 문제 정의
-${idea.q1}
+  const buildPrompt = (a) => {
+    const name = a.name || '나';
+    const pain = a.pain || a.q1 || '';
+    const wish = a.wish || a.q2 || '';
+    return `# Replit PRD — ${name}님의 업무 자동화 도구
 
-## 2. 핵심 기능 (첫 버전)
-${idea.q2}
+## 한 줄 목적
+${wish}
 
-## 3. 입력 / 출력
-- 입력: 사용자가 직접 손으로 하던 작업을 폼/시트로 입력받기
-- 출력: 1페이지 결과물 (HTML 화면)
+## 사용자
+- ${a.role || ''}
+- 평소 하루: ${a.day || ''}
 
-## 4. 디자인
-- 깔끔한 비즈니스 톤, 흰 배경 + 네이비 포인트
-- 페이지 타이틀에 "${idea.name}" 표기
+## 해결할 문제
+${pain}
+- 빈도/소요: ${a.freq || ''}
+- 현재는 이렇게 함: ${a.detail || ''}
 
-## 5. 기술 스택
-- HTML + Tailwind(CDN) + Vanilla JS
-- 백엔드: Node.js(Express) 또는 Python(Flask)
-- LLM이 필요하면 Replit AI integration 사용 (외부 API 키 X)
+## 핵심 기능 (첫 버전)
+${wish}
 
-## 6. 만들지 말 것
-- 회원가입/로그인, DB, 다국어, 결제, 이메일 발송 X
+## 입력 / 출력
+- 입력: 위 "현재는 이렇게 함" 단계에서 사람이 직접 손으로 하는 작업을 폼/시트로 입력받기
+- 출력: 1페이지 결과물(HTML)
+- 결과물 전달: ${a.output || '화면에 표시'}
 
-## 7. 완료 조건
-- Run 버튼으로 처음~끝까지 동작
+## 디자인
+- 깔끔한 비즈니스 톤, 흰 배경 + 네이비(#1E3A8A) 포인트
+- 페이지 타이틀에 "${name}" 표기 (예: "주간 보고서 - ${name}")
+- 모바일 대응 X (데스크톱 전용)
+
+## 기술 스택
+- 프론트: HTML + Tailwind(CDN) + Vanilla JS
+- 백엔드: Node.js(Express) 또는 Python(Flask) — Replit이 더 쉬운 쪽
+- LLM 필요 시: Replit AI integration (외부 API 키 X)
+
+## 만들지 말 것
+- 회원가입/로그인, DB, 다국어, 결제, 이메일 발송
+
+## 완료 조건
+- Run 버튼으로 처음부터 끝까지 동작
 - Deploy 버튼으로 진짜 URL에서 동일하게 동작`;
+  };
 
-  // ============ Idea Board (form) ============
-  const ideaGen = document.getElementById('ideaGenBtn');
-  if (ideaGen) {
-    const $v = id => document.getElementById(id).value.trim();
-    const previewPrompt = () => buildPrompt({
-      name: $v('ib_name') || '나',
-      brief: $v('ib_brief') || '(한 줄 아이디어)',
-      q1: $v('ib_q1') || '(미입력)',
-      q2: $v('ib_q2') || '(미입력)'
-    });
+  // Chat state
+  const chatBoard = document.getElementById('chatBoard');
+  const chatMessages = document.getElementById('chatMessages');
+  const chatInput = document.getElementById('chatInput');
+  const chatSendBtn = document.getElementById('chatSendBtn');
+  const chatResetBtn = document.getElementById('chatResetBtn');
+  const chatProgressBar = document.getElementById('chatProgressBar');
 
-    ideaGen.addEventListener('click', async () => {
-      const name = $v('ib_name'), brief = $v('ib_brief'), q1 = $v('ib_q1'), q2 = $v('ib_q2');
-      if (!name || !brief || !q1 || !q2) { alert('이름·아이디어·Q1·Q2를 모두 채워주세요'); return; }
-      const idea = { name, brief, q1, q2 };
-      idea.prompt = buildPrompt(idea);
-      await Ideas.add(idea);
-      document.getElementById('ideaForm').reset();
-      document.getElementById('ideaResult').hidden = true;
-      await renderGallery();
-      document.getElementById('galleryGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+  let chatStep = 0;
+  let chatAnswers = {};
 
-    document.getElementById('ideaResetBtn').addEventListener('click', () => {
-      document.getElementById('ideaForm').reset();
-      document.getElementById('ideaResult').hidden = true;
-    });
+  function pushBubble(text, who) {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble chat-bubble-' + who;
+    div.textContent = text;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 
-    document.getElementById('ideaCopyBtn').addEventListener('click', (e) => {
-      navigator.clipboard.writeText(document.getElementById('ideaPrompt').textContent).then(() => {
-        const b = e.target; const old = b.textContent;
-        b.textContent = '✓ 복사됨'; setTimeout(() => b.textContent = old, 1800);
+  function pushSystemCard(html) {
+    const div = document.createElement('div');
+    div.className = 'chat-system';
+    div.innerHTML = html;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function askNext() {
+    if (chatStep >= QUESTIONS.length) {
+      finishChat();
+      return;
+    }
+    const q = QUESTIONS[chatStep];
+    const text = q.q.replace('{name}', chatAnswers.name || '');
+    setTimeout(() => {
+      pushBubble(text, 'bot');
+      chatInput.placeholder = q.placeholder || '여기에 답변을 입력하고 Enter…';
+      chatInput.focus();
+      updateProgress();
+    }, 250);
+  }
+
+  function updateProgress() {
+    const pct = (chatStep / QUESTIONS.length) * 100;
+    if (chatProgressBar) chatProgressBar.style.width = pct + '%';
+  }
+
+  function handleSend() {
+    const v = chatInput.value.trim();
+    if (!v) return;
+    if (chatStep >= QUESTIONS.length) return;
+    pushBubble(v, 'user');
+    chatAnswers[QUESTIONS[chatStep].key] = v;
+    chatInput.value = '';
+    chatStep++;
+    askNext();
+  }
+
+  async function finishChat() {
+    chatInput.disabled = true;
+    chatSendBtn.disabled = true;
+    if (chatProgressBar) chatProgressBar.style.width = '100%';
+
+    const summary = buildSummary(chatAnswers);
+    const prompt = buildPrompt(chatAnswers);
+    const brief = chatAnswers.wish || chatAnswers.pain || '아이디어';
+
+    setTimeout(() => {
+      pushBubble('🎉 다 들었습니다! 아래 요약과 PRD를 자동으로 만들었어요.', 'bot');
+      pushSystemCard(`
+        <div class="chat-result-title">📋 요약</div>
+        <pre class="chat-result-pre">${esc(summary)}</pre>
+        <div class="chat-result-title" style="margin-top:14px;">🚀 Replit PRD</div>
+        <pre class="chat-result-pre chat-result-prd">${esc(prompt)}</pre>
+        <div class="chat-result-actions">
+          <button type="button" class="idea-btn" id="chatPostBtn">📌 모아보기에 올리기</button>
+          <button type="button" class="idea-btn idea-btn-ghost" id="chatDownloadBtn">⬇️ PRD를 .md로 받기</button>
+          <button type="button" class="idea-btn idea-btn-ghost" id="chatCopyBtn">📋 PRD 복사</button>
+        </div>
+      `);
+
+      document.getElementById('chatPostBtn').addEventListener('click', async () => {
+        const idea = {
+          name: chatAnswers.name,
+          brief: brief,
+          answers: { ...chatAnswers },
+          summary: summary,
+          prompt: prompt
+        };
+        await Ideas.add(idea);
+        pushBubble('✅ 모아보기에 등록했어요. 아래 갤러리에서 확인하고, 다른 사람 글에도 댓글을 달아보세요!', 'bot');
+        document.getElementById('galleryGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
-    });
 
-    // Live preview as user types
-    ['ib_name', 'ib_brief', 'ib_q1', 'ib_q2'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', () => {
-        if ($v('ib_q1') || $v('ib_q2')) {
-          document.getElementById('ideaPrompt').textContent = previewPrompt();
-          document.getElementById('ideaResult').hidden = false;
-        }
+      document.getElementById('chatDownloadBtn').addEventListener('click', () => {
+        const blob = new Blob([summary + '\n\n---\n\n' + prompt], { type: 'text/markdown' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `PRD_${chatAnswers.name || 'idea'}.md`;
+        a.click();
       });
+
+      document.getElementById('chatCopyBtn').addEventListener('click', (e) => {
+        navigator.clipboard.writeText(prompt).then(() => {
+          const b = e.target; const old = b.textContent;
+          b.textContent = '✓ 복사됨'; setTimeout(() => b.textContent = old, 1800);
+        });
+      });
+    }, 350);
+  }
+
+  function resetChat() {
+    chatStep = 0;
+    chatAnswers = {};
+    chatMessages.innerHTML = '';
+    chatInput.disabled = false;
+    chatSendBtn.disabled = false;
+    chatInput.value = '';
+    askNext();
+  }
+
+  if (chatBoard) {
+    chatSendBtn.addEventListener('click', handleSend);
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
     });
+    chatResetBtn.addEventListener('click', () => {
+      if (confirm('대화를 처음부터 다시 시작할까요?')) resetChat();
+    });
+    resetChat();
   }
 
   // ============ Gallery render ============
   const grid = document.getElementById('galleryGrid');
   const empty = document.getElementById('galleryEmpty');
   const countEl = document.getElementById('galleryCount');
+  let currentModalId = null;
 
   async function renderGallery() {
     if (!grid) return;
     const items = await Ideas.list();
     if (countEl) countEl.textContent = items.length;
     if (empty) empty.style.display = items.length ? 'none' : 'block';
-    grid.innerHTML = items.map(it => `
+    grid.innerHTML = items.map(it => {
+      const a = it.answers || {};
+      const pain = a.pain || it.q1 || '';
+      const wish = a.wish || it.q2 || '';
+      const linkN = (it.links || []).length;
+      const cmtN = (it.comments || []).length;
+      return `
       <article class="idea-card" data-id="${it.id}">
         <header class="idea-card-head">
           <span class="idea-card-name">${esc(it.name)}</span>
           <span class="idea-card-meta">
             <span class="idea-card-date">${fmtDate(it.createdAt)}</span>
-            <button type="button" class="idea-card-del" data-del="${it.id}">삭제</button>
+            <button type="button" class="idea-card-del" data-del="${it.id}" title="삭제">×</button>
           </span>
         </header>
-        <p class="idea-card-brief">${esc(it.brief)}</p>
+        <p class="idea-card-brief">${esc(it.brief || wish || '아이디어')}</p>
         <div class="idea-card-divider"></div>
-        <div class="idea-card-section">다듬기 답변</div>
-        <div class="idea-card-q">Q: 이 아이디어를 가장 먼저 사용할 사람은 누구이고, 그 사람이 지금 겪고 있는 가장 큰 불편함은 무엇인가요?</div>
-        <div class="idea-card-a">${esc(it.q1)}</div>
-        <div class="idea-card-q">Q: 첫 버전에서 반드시 동작해야 하는 핵심 기능 1가지는 무엇이고, 사용자는 그 기능을 어떤 상황에서 쓰게 되나요?</div>
-        <div class="idea-card-a">${esc(it.q2)}</div>
-        ${(it.comments && it.comments.length) ? `<div class="idea-card-comments">💬 완성 링크 ${it.comments.length}개</div>` : ''}
+        ${pain ? `<div class="idea-card-section">😣 반복 작업</div><div class="idea-card-a">${esc(pain)}</div>` : ''}
+        ${wish ? `<div class="idea-card-section">✨ 원하는 자동화</div><div class="idea-card-a">${esc(wish)}</div>` : ''}
+        <div class="idea-card-foot">
+          ${linkN ? `<span class="idea-pill idea-pill-orange">🔗 완성 ${linkN}</span>` : ''}
+          ${cmtN ? `<span class="idea-pill">💬 댓글 ${cmtN}</span>` : ''}
+          <span class="idea-pill-spacer"></span>
+          <span class="idea-pill-link">자세히 보기 →</span>
+        </div>
       </article>
-    `).join('');
+      `;
+    }).join('');
 
     grid.querySelectorAll('.idea-card').forEach(card => {
       card.addEventListener('click', (e) => {
@@ -1076,52 +1214,88 @@ ${idea.q2}
     const items = await Ideas.list();
     const it = items.find(x => x.id === id);
     if (!it) return;
+    currentModalId = id;
+    const a = it.answers || {};
+    const QLABELS = {
+      role: '지금 회사에서 어떤 일을 맡고 계세요?',
+      day: '하루가 보통 어떻게 흘러가시나요?',
+      pain: '"또 해야 하나..." 싶은 게 뭐예요?',
+      freq: '얼마나 자주 / 한 번에 얼마나 걸려요?',
+      detail: '그 시간 동안 구체적으로 뭘 하세요?',
+      wish: '어떤 자동화를 원하세요?',
+      output: '결과물은 어디로 받으면 되나요?'
+    };
+    const qaHtml = Object.keys(QLABELS).filter(k => a[k]).map(k => `
+      <div class="md-q">${esc(QLABELS[k])}</div>
+      <div class="md-a">${esc(a[k])}</div>
+    `).join('');
+
     modalBody.innerHTML = `
       <section class="md-section">
         <header class="md-head">
           <span class="md-name">${esc(it.name)}</span>
           <span class="md-date">${fmtDate(it.createdAt)}</span>
         </header>
-        <p class="md-brief">${esc(it.brief)}</p>
+        <p class="md-brief">${esc(it.brief || a.wish || '아이디어')}</p>
       </section>
 
       <section class="md-section">
-        <h3 class="md-title">아이디어 다듬기 결과</h3>
-        <div class="md-q">Q. 이 아이디어를 가장 먼저 사용할 사람은 누구이고, 그 사람이 지금 겪고 있는 가장 큰 불편함은 무엇인가요?</div>
-        <div class="md-a">${esc(it.q1)}</div>
-        <div class="md-q" style="margin-top:18px;">Q. 첫 버전에서 반드시 동작해야 하는 핵심 기능 1가지는 무엇이고, 사용자는 그 기능을 어떤 상황에서 쓰게 되나요?</div>
-        <div class="md-a">${esc(it.q2)}</div>
+        <h3 class="md-title">AI 어시스턴트와 나눈 대화</h3>
+        ${qaHtml || '<p class="md-empty">기록된 대화가 없습니다.</p>'}
       </section>
 
       <section class="md-section">
         <div class="md-title-row">
-          <h3 class="md-title md-title-accent">레플릿 셋업 프롬프트</h3>
-          <button type="button" class="md-copy" id="mdCopyBtn">복사하기</button>
+          <h3 class="md-title md-title-accent">Replit PRD</h3>
+          <div>
+            <button type="button" class="md-copy" id="mdCopyBtn">📋 복사</button>
+            <button type="button" class="md-copy md-copy-ghost" id="mdDownloadBtn">⬇️ .md 받기</button>
+          </div>
         </div>
-        <pre class="md-code"><code id="mdPromptCode">${esc(it.prompt || buildPrompt(it))}</code></pre>
+        <pre class="md-code"><code id="mdPromptCode">${esc(it.prompt || buildPrompt(a))}</code></pre>
       </section>
 
       <section class="md-section">
-        <h3 class="md-title md-title-accent">완성한 링크 (${(it.comments||[]).length})</h3>
-        <p class="md-hint">레플릿에서 빌드 완료한 사람은 아래에 Deploy URL을 댓글처럼 추가하세요.</p>
-        <div class="md-comments" id="mdCommentList">
+        <h3 class="md-title md-title-accent">🔗 완성한 링크 (${(it.links||[]).length})</h3>
+        <p class="md-hint">Replit에서 빌드를 마친 분은 아래에 Deploy URL을 추가해 주세요.</p>
+        <div class="md-comments">
+          ${(it.links || []).map(l => `
+            <div class="md-comment">
+              <div class="md-comment-head">
+                <strong>${esc(l.author || '익명')}</strong>
+                <span>${fmtDate(l.createdAt)}</span>
+              </div>
+              <a href="${esc(l.url)}" target="_blank" rel="noopener" class="md-comment-link">🔗 ${esc(l.url)}</a>
+              ${l.note ? `<p class="md-comment-note">${esc(l.note)}</p>` : ''}
+            </div>
+          `).join('') || '<p class="md-empty">아직 완성 링크가 없어요.</p>'}
+        </div>
+        <div class="md-comment-form">
+          <input type="text" id="lk_author" placeholder="이름" autocomplete="off">
+          <input type="url" id="lk_url" placeholder="https://your-app.replit.app">
+          <input type="text" id="lk_note" placeholder="한 줄 후기 (선택)">
+          <button type="button" class="idea-btn" id="lkAddBtn">+ 링크 추가</button>
+        </div>
+      </section>
+
+      <section class="md-section">
+        <h3 class="md-title md-title-accent">💬 댓글 (${(it.comments||[]).length})</h3>
+        <p class="md-hint">아이디어에 대한 의견·질문·응원을 자유롭게 남겨주세요.</p>
+        <div class="md-comments">
           ${(it.comments || []).map(c => `
             <div class="md-comment">
               <div class="md-comment-head">
                 <strong>${esc(c.author || '익명')}</strong>
                 <span>${fmtDate(c.createdAt)}</span>
               </div>
-              <a href="${esc(c.url)}" target="_blank" rel="noopener" class="md-comment-link">🔗 ${esc(c.url)}</a>
-              ${c.note ? `<p class="md-comment-note">${esc(c.note)}</p>` : ''}
+              <p class="md-comment-note">${esc(c.text)}</p>
             </div>
-          `).join('') || '<p class="md-empty">아직 완성 링크가 없어요. 첫 번째가 되어보세요!</p>'}
+          `).join('') || '<p class="md-empty">첫 번째 댓글을 남겨보세요!</p>'}
         </div>
-
         <div class="md-comment-form">
           <input type="text" id="cm_author" placeholder="이름" autocomplete="off">
-          <input type="url" id="cm_url" placeholder="https://your-app.replit.app">
-          <input type="text" id="cm_note" placeholder="한 줄 후기 (선택)">
-          <button type="button" class="idea-btn" id="cmAddBtn">+ 링크 추가</button>
+          <input type="text" id="cm_text" placeholder="댓글 내용" style="grid-column: span 2;">
+          <button type="button" class="idea-btn" id="cmAddBtn">+ 댓글</button>
         </div>
       </section>
     `;
@@ -1136,21 +1310,38 @@ ${idea.q2}
       });
     });
 
-    document.getElementById('cmAddBtn').addEventListener('click', async () => {
-      const author = document.getElementById('cm_author').value.trim() || '익명';
-      let url = document.getElementById('cm_url').value.trim();
-      const note = document.getElementById('cm_note').value.trim();
+    document.getElementById('mdDownloadBtn').addEventListener('click', () => {
+      const txt = document.getElementById('mdPromptCode').textContent;
+      const blob = new Blob([txt], { type: 'text/markdown' });
+      const aTag = document.createElement('a');
+      aTag.href = URL.createObjectURL(blob);
+      aTag.download = `PRD_${it.name || 'idea'}.md`;
+      aTag.click();
+    });
+
+    document.getElementById('lkAddBtn').addEventListener('click', async () => {
+      const author = document.getElementById('lk_author').value.trim() || '익명';
+      let url = document.getElementById('lk_url').value.trim();
+      const note = document.getElementById('lk_note').value.trim();
       if (!url) { alert('URL을 입력해 주세요'); return; }
       if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-      await Ideas.addComment(id, { author, url, note });
+      await Ideas.addLink(id, { author, url, note });
       await openIdeaDetail(id);
-      await renderGallery();
+    });
+
+    document.getElementById('cmAddBtn').addEventListener('click', async () => {
+      const author = document.getElementById('cm_author').value.trim() || '익명';
+      const text = document.getElementById('cm_text').value.trim();
+      if (!text) { alert('댓글 내용을 입력해 주세요'); return; }
+      await Ideas.addComment(id, { author, text });
+      await openIdeaDetail(id);
     });
   }
 
   function closeModal() {
     modal.hidden = true;
     document.body.style.overflow = '';
+    currentModalId = null;
   }
   if (modal) {
     modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeModal));
