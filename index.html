@@ -964,7 +964,7 @@
     { key: 'pain',    q: '그 중에 "아 이거 또 해야 하나..." 싶은 게 뭐예요?', placeholder: '예: 매주 금요일 캠페인별 진행 보고서 채우기' },
     { key: 'freq',    q: '얼마나 자주 하세요? 한 번 할 때 시간이 얼마나 걸려요?', placeholder: '예: 주 1회, 약 1시간 30분' },
     { key: 'detail',  q: '그 시간 동안 구체적으로 뭘 하세요?', placeholder: '예: 대시보드에서 숫자 복사 → 시트 정리 → PPT 옮기기' },
-    { key: 'wish',    q: '어떤 자동화를 원하세요?\n\n💡 만들기 좋은 간단한 예시:\n• 입력 폼 → 1페이지 결과 리포트 자동 생성\n• 텍스트 붙여넣기 → 핵심만 추려 요약\n• 표/리스트 입력 → 보기 좋은 카드로 정리\n• 항목 체크 → 자동 점수·등급 계산기\n• 이름·항목 입력 → 깔끔한 메시지 템플릿 변환\n• 간단한 진단 폼 → 결과 페이지로 안내', placeholder: '예: 캠페인 숫자를 입력하면 1페이지 보고서 화면 자동 생성' }
+    { key: 'wish',    q: '어떤 자동화를 원하세요?', placeholder: '예: 캠페인 숫자를 입력하면 1페이지 보고서 화면 자동 생성', dynamic: true }
   ];
 
   const buildSummary = (a) => `## ${a.name}님의 고민 요약\n\n` +
@@ -1044,13 +1044,68 @@ ${wish}
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
+  // 답변 맥락에서 키워드 뽑아 맞춤형 추천 만들기
+  function buildContextualSuggestions(a) {
+    const ctx = ((a.role || '') + ' ' + (a.pain || '') + ' ' + (a.detail || '')).toLowerCase();
+    const has = (...kws) => kws.some(k => ctx.includes(k));
+    const out = [];
+
+    if (has('보고서', '보고', '리포트', 'report', '주간', '월간')) {
+      out.push('숫자·코멘트 입력 → 1페이지 보고서 화면 자동 생성');
+    }
+    if (has('정리', '취합', '모음', '리스트', '시트')) {
+      out.push('여러 줄 텍스트 붙여넣기 → 보기 좋은 표·카드로 정리');
+    }
+    if (has('요약', '회의', '미팅', '메모', '노트')) {
+      out.push('회의록 텍스트 붙여넣기 → 핵심 3줄 + 액션아이템 자동 추출');
+    }
+    if (has('체크', '확인', '점검', '검수', '리뷰')) {
+      out.push('항목 체크리스트 → 누락 자동 감지 + 결과 카드');
+    }
+    if (has('점수', '평가', '등급', '진단', '레벨')) {
+      out.push('진단 폼 → 점수·등급 자동 계산 결과 페이지');
+    }
+    if (has('메시지', '문구', '카피', '템플릿', '발송', '슬랙', '메일')) {
+      out.push('이름·항목 입력 → 깔끔한 메시지 템플릿 변환');
+    }
+    if (has('계산', '견적', '비용', '단가', '예산')) {
+      out.push('항목 입력 → 견적·비용 자동 계산 결과 페이지');
+    }
+    if (has('일정', '캘린더', '스케줄', '예약', '데드라인')) {
+      out.push('마감일 입력 → 역산 일정표 자동 생성');
+    }
+    if (has('번역', '영어', '외국')) {
+      out.push('한국어 입력 → 비즈니스 톤 영문 변환 결과');
+    }
+    if (has('태그', '분류', '카테고리')) {
+      out.push('항목 입력 → 자동 분류·태그 결과 카드');
+    }
+
+    // 기본 추천 (맥락이 부족할 때 채우기)
+    const fallback = [
+      '입력 폼 → 1페이지 결과 화면 자동 생성',
+      '텍스트 붙여넣기 → 핵심만 추려 요약',
+      '항목 체크 → 결과 페이지로 안내'
+    ];
+    while (out.length < 3) {
+      const pick = fallback.find(f => !out.includes(f));
+      if (!pick) break;
+      out.push(pick);
+    }
+    return out.slice(0, 4);
+  }
+
   function askNext() {
     if (chatStep >= QUESTIONS.length) {
       finishChat();
       return;
     }
     const q = QUESTIONS[chatStep];
-    const text = q.q.replace('{name}', chatAnswers.name || '');
+    let text = q.q.replace('{name}', chatAnswers.name || '');
+    if (q.dynamic) {
+      const recs = buildContextualSuggestions(chatAnswers);
+      text += '\n\n💡 ' + chatAnswers.name + '님 답변 기반 추천:\n' + recs.map(r => '• ' + r).join('\n');
+    }
     setTimeout(() => {
       pushBubble(text, 'bot');
       chatInput.placeholder = q.placeholder || '여기에 답변을 입력하고 Enter…';
